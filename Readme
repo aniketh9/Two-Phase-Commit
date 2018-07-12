@@ -1,0 +1,131 @@
+1.The unzipped tar amalles1-syerram1-project3.tar.gz file contains the following files
+a.src directory   
+b.gen-java containing the generated java stub code for twophase.thrift 
+c.makefile to compile the controller and branch source code.  
+d.testclient.sh :- shell script to invoke the test cases. 
+e.testserver.sh :- shell script to invoke the test server that listens for test case requests from testclient.
+f.testtool.thrift :- Thrift file to generate test stub classes.
+g.client.sh:-Shell script to invoke the client. 
+h.coordinator.sh :- Shell script to invoke the coordinator.
+i.replica.sh :- Shell script to invoke the participant replicas.
+j.twoPhase.thrift:-  Thrift file to generate two face interface stub classes.
+k.sample[1-5] :- input files for 5 testcases
+l.jars folder :- For external library jar files.
+
+
+Description on source files :
+
+Client.java :- Simple thread server which takes read and write requests and outputs on the screen that invoked it.
+   
+Coordinator.java:- Coordinator is created as  TthreadPoolServer which accepts requests from clients and process accordingly.
+  
+CoordinatorHandler.java :- Implements Coordinator Interface to handle read and write requests. It uses Sqlite internally to log the 
+						   transactions  
+
+
+InterfaceConstants.java:- All the interface constants like GLOBAL_COMMIT,GLOBAL_ABORT,VOTED_YES etc...are defined with in this class.
+
+LogEntry.java:- This class holds the attributes of log results, which are used during recovery for coordinator and participants
+
+Operation.java:- Enumeration class  containing Read and Write attributes.
+
+Participant.java:- Participant Replica is implemented as TThreadPoolServer. It process the read and write requests recieved from coordinator.  
+
+
+ParticipantHandler.java :-This class ParticipantHandler is implementation of  ParticipantFileStore.Iface
+						   Process the requests of write and read from coordinator 
+						   Takes decision and sends vote to coordinator, persists the files in permanent file system
+						   Uses sql-lite to log the transactions.
+ 
+
+TestToolServer: is TThreadPoolServer which runs on individual machines of coordinator and particpants to execute the testcases 
+
+
+TestToolHandler: implements TestToolThrift interface used to intialize the testcases to individual participants and coordinator   
+
+
+TestClient: contains main method to invoke TestTool Server to execute the test cases.
+
+
+
+Steps to execute the two phase commit implementation.
+
+Step1:
+How to compile :
+
+Run the command "make" in the location  where MakeFile is found, the source code is 
+compiled and  put into "bin\" directory 
+
+Step:2
+How to start  test cases execution :
+>amalles1@remote02:/ds/Project3/amalles1-syerram1-project3$ bash
+>amalles1@remote02:/ds/Project3/amalles1-syerram1-project3$ ./testclient.sh 9035 128.226.180.166 9031  coordinator_input.txt test_input.txt
+
+How to start test servers on different machines :
+>amalles1@remote02:/ds/Project3/amalles1-syerram1-project3$ bash
+>amalles1@remote02:/ds/Project3/amalles1-syerram1-project3$ ./testserver.sh 9032
+>amalles1@remote03:/ds/Project3/amalles1-syerram1-project3$ ./testserver.sh 9033
+>amalles1@remote04:/ds/Project3/amalles1-syerram1-project3$ ./testserver.sh 9035
+
+
+
+Sample Output for above commands :
+amalles1@remote01:/ds/Project3/amalles1-syerram1-project3$ ./testclient.sh 9035 128.226.180.166 9031  coordinator_input.txt test_input.txt
+TEST:Starting Participants
+TEST:Starting Coordinator
+TEST CASE-1 START...
+TEST CASE-1 END...
+TEST CASE-2 START...
+TEST CASE-2 END...
+
+===================================================================================================================================================================
+amalles1@remote02:/ds/Project3/amalles1-syerram1-project3$ ./testserver.sh 9032
+Starting the TestTool server...
+Checking Recoverable Transactions
+Starting Participant Server replica1...
+PARTICIPANT replica1: RECIEVED WRITE_OPERATION ON FILE : sample1
+PARTICIPANT replica1: VOTED_YES FOR WRITE_OPERATION ON FILE : sample1
+PARTICIPANT replica1: COMMITED THE FILE : sample1 SUCCESFULLY
+Checking Recoverable Transactions
+Starting Participant Server replica1...
+PARTICIPANT replica1: RECIEVED READ_OPERATION ON FILE  "sample1".
+PARTICIPANT replica1: RECIEVED WRITE_OPERATION ON FILE : sample2
+PARTICIPANT replica1: RECIEVED WRITE_OPERATION ON FILE : sample2
+PARTICIPANT replica1: ABORTING THE CURRENT WRITE REQUEST & VOTING NO DUE TO CONCURRENT OPERATION ON FILE : sample2
+
+===================================================================================================================================================================
+
+amalles1@remote03:/ds/Project3/amalles1-syerram1-project3$ ./testserver.sh 9033
+Starting the TestTool server...
+Checking Recoverable Transactions
+Starting Participant Server replica2...
+PARTICIPANT replica2: RECIEVED WRITE_OPERATION ON FILE : sample1
+PARTICIPANT replica2: VOTED_YES FOR WRITE_OPERATION ON FILE : sample1
+PARTICIPANT replica2: COMMITED THE FILE : sample1 SUCCESFULLY
+
+===================================================================================================================================================================
+amalles1@remote04:/ds/Project3/amalles1-syerram1-project3$ ./testserver.sh 9035
+Starting the TestTool server...
+Checking recoverable Transactions
+Starting the Coordinator server...
+COORDINATOR:  STARTED VOTING PHASE FOR WRITE REQUEST ON FILE: sample1
+COORDINATOR: ALL THE PARTICIPANTS ARE READY FOR WRITE OPERATION ON FILE : sample1
+COORDINATOR: LOGGED DECISION AS COMMIT
+COORDINATOR: SENT DECISION AS COMMIT TO ALL PARTICIPANTS
+{"1":{"i32":1}}
+
+COORDINATOR: REDIRECTING THE READ REQUEST ON FILE sample1 TO replica1
+{"1":{"str":"sample1"},"2":{"str":"Test Case 1 Reporting Sir!!"}}
+
+COORDINATOR:  STARTED VOTING PHASE FOR WRITE REQUEST ON FILE: sample2
+COORDINATOR:  STARTED VOTING PHASE FOR WRITE REQUEST ON FILE: sample2
+COORDINATOR: ALL THE PARTICIPANTS ARE READY FOR WRITE OPERATION ON FILE : sample2
+COORDINATOR: LOGGED DECISION AS COMMIT
+COORDINATOR: SENT DECISION AS COMMIT TO ALL PARTICIPANTS
+{"1":{"i32":1}}
+
+
+
+
+
+
